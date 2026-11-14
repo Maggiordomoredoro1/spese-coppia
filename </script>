@@ -36,4 +36,22 @@ document.querySelector("#form").addEventListener("submit",e=>{e.preventDefault()
 
 function show(t,ok){msg.textContent=t;msg.className="message "+(ok?"ok":"err");msg.style.display="block"}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/static/sw.js");
+
+const exportBtn=document.createElement("button");
+exportBtn.type="button";
+exportBtn.textContent="ESPORTA SPESE";
+exportBtn.style.cssText="width:100%;padding:14px;margin-top:16px;border-radius:10px;font-weight:bold";
+exportBtn.onclick=()=>{
+ const spese=JSON.parse(localStorage.getItem("spese_coppia")||"[]");
+ if(!spese.length){alert("Nessuna spesa da esportare");return}
+ const righe=[["Persona","Mese","Categoria","Distinta","Importo"],...spese.map(s=>[s.utente,s.mese,s.categoria,s.distinta,s.importo])];
+ const csv="\uFEFF"+righe.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;a.download="spese_coppia.csv";a.click();
+ URL.revokeObjectURL(url);
+};
+document.querySelector("#form").after(exportBtn);
+
 </script></body></html>
