@@ -1,0 +1,252 @@
+
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#153e50">
+<title>Spese di coppia</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px;background:#f3f7f5;color:#193642;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+main{max-width:600px;margin:auto}
+header{background:#153e50;color:white;padding:22px;border-radius:20px;margin-bottom:16px}
+h1{margin:0;font-size:27px}
+.panel{background:white;padding:20px;border-radius:20px;margin:14px 0;box-shadow:0 4px 20px #153e5010}
+label{display:block;font-size:13px;font-weight:700;margin:15px 0 7px}
+input,select{width:100%;padding:14px;border:1px solid #d5e1df;border-radius:12px;background:#f9fbfa;font-size:17px;min-height:50px}
+button{border:0;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer}
+.users{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.choice{background:#eaf0f5;color:#193642}
+.choice.active{background:#cde9dc;border:2px solid #36866b}
+.primary{width:100%;background:#226b68;color:white;margin-top:18px}
+.secondary{width:100%;background:#e3f0e9;color:#174c3c;margin-top:10px}
+.message{display:none;padding:12px;margin-top:12px;border-radius:10px}
+.ok{display:block;background:#e3f5e9;color:#21643b}
+.err{display:block;background:#fff0ed;color:#963b2e}
+.muted{font-size:13px;color:#687b84;line-height:1.5}
+#login{max-width:380px;margin:12vh auto;text-align:center}
+#app{display:none}
+.entry{padding:12px 0;border-bottom:1px solid #e8eeeb}
+.entry strong{display:block}
+</style>
+</head>
+<body>
+<main>
+<section id="login" class="panel">
+<h2>🔐 Spese di coppia</h2>
+<p class="muted">Inserisci il PIN per continuare</p>
+<input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN">
+<button class="primary" id="loginBtn">ACCEDI</button>
+<div id="loginMsg" class="message err"></div>
+</section>
+
+<div id="app">
+<header><h1>Nuova spesa</h1><p>Bilancio condiviso · Giulia e Lorenzo</p></header>
+
+<section class="panel">
+<form id="form">
+<label>CHI HA PAGATO?</label>
+<div class="users">
+<button type="button" class="choice" data-v="GIULIA">GIULIA</button>
+<button type="button" class="choice" data-v="LORENZO">LORENZO</button>
+</div>
+
+<label for="mese">MESE</label>
+<select id="mese" required>
+<option value="">Seleziona il mese</option>
+<option>GENNAIO</option><option>FEBBRAIO</option><option>MARZO</option>
+<option>APRILE</option><option>MAGGIO</option><option>GIUGNO</option>
+<option>LUGLIO</option><option>AGOSTO</option><option>SETTEMBRE</option>
+<option>OTTOBRE</option><option>NOVEMBRE</option><option>DICEMBRE</option>
+</select>
+
+<label for="categoria">CATEGORIA</label>
+<select id="categoria" required>
+<option value="">Seleziona la categoria</option>
+<option>ALLOGGIO</option>
+<option>ALIMENTARE</option>
+<option>TRASPORTI</option>
+<option>CURA PERSONALE</option>
+<option>SVAGO_ALTRO</option>
+</select>
+
+<label for="distinta">DISTINTA / DESCRIZIONE</label>
+<input id="distinta" maxlength="80" required placeholder="Es. spesa Conad, benzina, affitto">
+
+<label for="importo">IMPORTO (€)</label>
+<input id="importo" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0.00">
+
+<button class="primary" type="submit">REGISTRA SPESA</button>
+<div id="message" class="message"></div>
+</form>
+</section>
+
+<section class="panel">
+<h3>Spese registrate</h3>
+<strong id="total">Totale: € 0,00</strong>
+<div id="entries"></div>
+</section>
+
+<section class="panel">
+<h3>Backup e trasferimento Excel</h3>
+<p class="muted">Esporta le spese in CSV per aprirle con Excel. Il bilancio originale non viene modificato automaticamente.</p>
+<button class="primary" id="csvBtn">ESPORTA SPESE PER EXCEL (CSV)</button>
+<button class="secondary" id="jsonBtn">ESPORTA BACKUP COMPLETO (JSON)</button>
+<label for="restore">RIPRISTINA BACKUP JSON</label>
+<input id="restore" type="file" accept=".json,application/json">
+<div id="backupMsg" class="message"></div>
+</section>
+<p class="muted" style="text-align:center">Conserva periodicamente una copia di backup delle tue spese.</p>
+</div>
+</main>
+
+<script>
+"use strict";
+const PIN="9909";
+const KEY="spese_coppia";
+let selected="";
+let spese=[];
+
+const $=id=>document.getElementById(id);
+
+function show(id,text,ok){
+ const el=$(id);
+ el.textContent=text;
+ el.className="message "+(ok?"ok":"err");
+}
+
+function load(){
+ try{
+  const data=JSON.parse(localStorage.getItem(KEY)||"[]");
+  spese=Array.isArray(data)?data:[];
+ }catch(e){spese=[]}
+}
+
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(spese));
+}
+
+function euro(n){
+ return Number(n||0).toLocaleString("it-IT",{style:"currency",currency:"EUR"});
+}
+
+function render(){
+ $("entries").innerHTML="";
+ let totale=0;
+ [...spese].reverse().forEach(s=>{
+  totale+=Number(s.importo);
+  const div=document.createElement("div");
+  div.className="entry";
+  const strong=document.createElement("strong");
+  strong.textContent=s.utente+" · "+euro(s.importo);
+  const small=document.createElement("div");
+  small.className="muted";
+  small.textContent=s.mese+" · "+s.categoria+" · "+s.distinta;
+  div.append(strong,small);
+  $("entries").append(div);
+ });
+ $("total").textContent="Totale: "+euro(totale);
+}
+
+$("loginBtn").onclick=()=>{
+ if($("pin").value===PIN){
+  $("login").style.display="none";
+  $("app").style.display="block";
+  load();
+  render();
+ }else{
+  show("loginMsg","PIN non corretto.",false);
+ }
+};
+
+$("pin").addEventListener("keydown",e=>{
+ if(e.key==="Enter")$("loginBtn").click();
+});
+
+document.querySelectorAll(".choice").forEach(b=>{
+ b.onclick=()=>{
+  selected=b.dataset.v;
+  document.querySelectorAll(".choice").forEach(x=>x.classList.toggle("active",x===b));
+ };
+});
+
+$("form").addEventListener("submit",e=>{
+ e.preventDefault();
+ if(!selected){show("message","Seleziona chi ha pagato.",false);return}
+ const s={
+  utente:selected,
+  mese:$("mese").value,
+  categoria:$("categoria").value,
+  distinta:$("distinta").value.trim(),
+  importo:Number($("importo").value),
+  id:Date.now()
+ };
+ if(!s.mese||!s.categoria||!s.distinta||!Number.isFinite(s.importo)||s.importo<=0){
+  show("message","Controlla tutti i campi.",false);return;
+ }
+ try{
+  spese.push(s);
+  save();
+  render();
+  $("form").reset();
+  selected="";
+  document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));
+  show("message","Spesa salvata correttamente!",true);
+ }catch(err){
+  spese.pop();
+  show("message","Errore di salvataggio. Esporta subito un backup.",false);
+ }
+});
+
+function download(name,content,type){
+ const blob=new Blob([content],{type:type});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download=name;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+$("csvBtn").onclick=()=>{
+ if(!spese.length){show("backupMsg","Nessuna spesa da esportare.",false);return}
+ const rows=[
+  ["Persona","Mese","Categoria","Distinta","Importo"],
+  ...spese.map(s=>[s.utente,s.mese,s.categoria,s.distinta,Number(s.importo).toFixed(2).replace(".",",")])
+ ];
+ const csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ download("spese_coppia.csv",csv,"text/csv;charset=utf-8");
+ show("backupMsg","Esportazione avviata. Salva il CSV nell'app File dell'iPad.",true);
+};
+
+$("jsonBtn").onclick=()=>{
+ if(!spese.length){show("backupMsg","Nessuna spesa da salvare.",false);return}
+ download("backup_spese_coppia.json",JSON.stringify(spese,null,2),"application/json");
+ show("backupMsg","Backup creato. Conservalo in File o Drive.",true);
+};
+
+$("restore").onchange=async e=>{
+ const file=e.target.files[0];
+ if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());
+  if(!Array.isArray(data))throw new Error();
+  const ids=new Set(spese.map(s=>String(s.id)));
+  data.forEach(s=>{
+   if(s.utente&&s.mese&&s.categoria&&s.distinta&&Number.isFinite(Number(s.importo))&&!ids.has(String(s.id))){
+    spese.push(s);
+   }
+  });
+  save();render();
+  show("backupMsg","Backup ripristinato correttamente.",true);
+ }catch(err){
+  show("backupMsg","File JSON non valido.",false);
+ }
+ e.target.value="";
+};
+</script>
+</body>
+</html>
