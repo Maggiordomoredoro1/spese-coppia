@@ -23,7 +23,9 @@ select,input{width:100%;border:1px solid #e0e8eb;background:#f8fafb;border-radiu
 let selected="";
 const login=document.querySelector("#login"),msg=document.querySelector("#message");
 document.querySelectorAll(".choice").forEach(b=>b.addEventListener("click",()=>{selected=b.dataset.v;document.querySelectorAll(".choice").forEach(x=>x.classList.toggle("active",x===b))}));
-document.querySelector("#loginBtn").onclick=async()=>{let r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:document.querySelector("#pin").value})});let j=await r.json();if(j.ok){login.style.display="none"}else{let lm=document.querySelector("#loginMsg");lm.textContent=j.error;lm.style.display="block"}};
+
+document.querySelector("#loginBtn").onclick=()=>{if(document.querySelector("#pin").value==="1234"){login.style.display="none";document.querySelector("#loginMsg").style.display="none"}else{let lm=document.querySelector("#loginMsg");lm.textContent="PIN errato";lm.style.display="block"}};
+
 document.querySelector("#form").addEventListener("submit",async e=>{e.preventDefault();if(!selected){show("Seleziona chi ha pagato.",false);return}let d={utente:selected,mese:document.querySelector("#mese").value,categoria:document.querySelector("#categoria").value,distinta:document.querySelector("#distinta").value.trim(),importo:document.querySelector("#importo").value};try{let r=await fetch("/api/spesa",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});let j=await r.json();show(j.message||j.error,j.ok);if(j.ok){document.querySelector("#importo").value="";document.querySelector("#distinta").value="";document.querySelector("#importo").focus()}}catch{show("Connessione non riuscita. Riprova.",false)}});
 function show(t,ok){msg.textContent=t;msg.className="message "+(ok?"ok":"err");msg.style.display="block"}
 if("serviceWorker" in navigator)navigator.serviceWorker.register("/static/sw.js");
