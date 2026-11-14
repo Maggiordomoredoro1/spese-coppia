@@ -1,57 +1,252 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153e50"><link rel="manifest" href="/static/manifest.json"><title>Spese di coppia</title>
+
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#153e50">
+<title>Spese di coppia</title>
 <style>
-:root{--navy:#153e50;--teal:#226b68;--mint:#dff3e9;--pink:#f6e5ef;--blue:#e7eff9;--orange:#f7e8dc;--ink:#193642;--muted:#687b84;--bg:#f4f7f8;--white:#fff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
-main{max-width:650px;margin:0 auto;padding:22px 0 28px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.eyebrow{font-size:12px;letter-spacing:.13em;color:var(--muted);font-weight:700}.title{font-size:30px;letter-spacing:-.04em;margin:5px 0 0;font-weight:750}.mark{width:48px;height:48px;border-radius:16px;background:var(--mint);display:grid;place-items:center;font-size:23px}
-.panel{background:white;border-radius:24px;padding:20px;box-shadow:0 8px 28px #153e500c}.field{margin-bottom:18px}.label{font-size:13px;color:var(--muted);font-weight:700;display:block;margin:0 0 9px}.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{border:1px solid #e1e8eb;background:#f8fafb;border-radius:13px;padding:14px 8px;font-size:15px;font-weight:650;color:var(--ink)}.choice.active{background:var(--blue);border:2px solid #7da6d8;padding:13px 7px;color:#204d80}
-select,input{width:100%;border:1px solid #e0e8eb;background:#f8fafb;border-radius:13px;padding:15px 14px;font-size:17px;color:var(--ink);outline-color:#7da6d8;min-height:54px}
-.amountwrap{position:relative}.euro{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--muted);font-weight:600}.amount{padding-left:43px;font-size:26px;font-weight:650;letter-spacing:-.02em}
-.submit{width:100%;border:0;background:var(--teal);color:white;border-radius:15px;padding:17px;font-size:16px;font-weight:750;letter-spacing:.02em;box-shadow:0 5px 12px #226b6825;margin-top:3px}.submit:active{transform:scale(.99)}.message{display:none;margin-top:14px;padding:13px 15px;border-radius:13px;font-size:14px;line-height:1.4}.ok{background:#e3f5e9;color:#21643b}.err{background:#fff0ed;color:#963b2e}.foot{text-align:center;color:#829198;font-size:12px;padding:16px}
-#login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;z-index:5}#login .box{max-width:360px;width:100%;background:white;border-radius:24px;padding:25px;text-align:center}#login h2{margin:5px 0 8px}#login p{color:var(--muted);font-size:14px}#pin{font-size:24px;text-align:center;letter-spacing:.3em}
-@media(min-width:600px){main{padding-top:40px}.panel{padding:28px}.title{font-size:34px}}
-</style></head><body>
-<div id="login"><div class="box"><div class="mark" style="margin:0 auto 14px">🔐</div><h2>Spese di coppia</h2><p>Inserisci il PIN per continuare</p><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="••••" aria-label="PIN"><button class="submit" id="loginBtn" style="margin-top:12px">ACCEDI</button><div id="loginMsg" class="message err"></div></div></div>
-<main><header class="top"><div><div class="eyebrow">BILANCIO CONDIVISO</div><h1 class="title">Nuova spesa</h1></div><div class="mark">€</div></header>
-<section class="panel"><form id="form">
-<div class="field"><label class="label">CHI HA PAGATO?</label><div class="seg" id="users"><button type="button" class="choice" data-v="GIULIA">Giulia</button><button type="button" class="choice" data-v="LORENZO">Lorenzo</button></div></div>
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px;background:#f3f7f5;color:#193642;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+main{max-width:600px;margin:auto}
+header{background:#153e50;color:white;padding:22px;border-radius:20px;margin-bottom:16px}
+h1{margin:0;font-size:27px}
+.panel{background:white;padding:20px;border-radius:20px;margin:14px 0;box-shadow:0 4px 20px #153e5010}
+label{display:block;font-size:13px;font-weight:700;margin:15px 0 7px}
+input,select{width:100%;padding:14px;border:1px solid #d5e1df;border-radius:12px;background:#f9fbfa;font-size:17px;min-height:50px}
+button{border:0;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer}
+.users{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.choice{background:#eaf0f5;color:#193642}
+.choice.active{background:#cde9dc;border:2px solid #36866b}
+.primary{width:100%;background:#226b68;color:white;margin-top:18px}
+.secondary{width:100%;background:#e3f0e9;color:#174c3c;margin-top:10px}
+.message{display:none;padding:12px;margin-top:12px;border-radius:10px}
+.ok{display:block;background:#e3f5e9;color:#21643b}
+.err{display:block;background:#fff0ed;color:#963b2e}
+.muted{font-size:13px;color:#687b84;line-height:1.5}
+#login{max-width:380px;margin:12vh auto;text-align:center}
+#app{display:none}
+.entry{padding:12px 0;border-bottom:1px solid #e8eeeb}
+.entry strong{display:block}
+</style>
+</head>
+<body>
+<main>
+<section id="login" class="panel">
+<h2>🔐 Spese di coppia</h2>
+<p class="muted">Inserisci il PIN per continuare</p>
+<input id="pin" type="password" inputmode="numeric" maxlength="4" placeholder="PIN">
+<button class="primary" id="loginBtn">ACCEDI</button>
+<div id="loginMsg" class="message err"></div>
+</section>
 
-<div class="field"><label class="label" for="mese">MESE</label><select id="mese" required><option value="">Seleziona il mese</option><option>GENNAIO</option><option>FEBBRAIO</option><option>MARZO</option><option>APRILE</option><option>MAGGIO</option><option>GIUGNO</option><option>LUGLIO</option><option>AGOSTO</option><option>SETTEMBRE</option><option>OTTOBRE</option><option>NOVEMBRE</option><option>DICEMBRE</option></select></div>
+<div id="app">
+<header><h1>Nuova spesa</h1><p>Bilancio condiviso · Giulia e Lorenzo</p></header>
 
-<div class="field"><label class="label" for="
-<div class="field"><label class="label" for="categoria">CATEGORIA</label><select id="categoria" required><option value="">Seleziona la categoria</option><option>ALLOGGIO</option><option>ALIMENTARE</option><option>TRASPORTI</option><option>CURA PERSONALE</option><option>SVAGO_ALTRO</option></select></div>
+<section class="panel">
+<form id="form">
+<label>CHI HA PAGATO?</label>
+<div class="users">
+<button type="button" class="choice" data-v="GIULIA">GIULIA</button>
+<button type="button" class="choice" data-v="LORENZO">LORENZO</button>
+</div>
 
+<label for="mese">MESE</label>
+<select id="mese" required>
+<option value="">Seleziona il mese</option>
+<option>GENNAIO</option><option>FEBBRAIO</option><option>MARZO</option>
+<option>APRILE</option><option>MAGGIO</option><option>GIUGNO</option>
+<option>LUGLIO</option><option>AGOSTO</option><option>SETTEMBRE</option>
+<option>OTTOBRE</option><option>NOVEMBRE</option><option>DICEMBRE</option>
+</select>
 
-<div class="field"><label class="label" for="distinta">DISTINTA / DESCRIZIONE</label><input id="distinta" type="text" maxlength="80" placeholder="Es. spesa Conad, benzina, affitto" required></div>\n<div class="field"><label class="label" for="importo">IMPORTO</label><div class="amountwrap"><span class="euro">€</span><input class="amount" id="importo" type="number" min="0.01" step="0.01" placeholder="0,00" required></div></div>
-<button class="submit" type="submit">＋　REGISTRA SPESA</button></form><div id="message" class="message"></div></section>
-<div class="foot">Stipendi e riepiloghi restano nel tuo Excel.</div></main>
+<label for="categoria">CATEGORIA</label>
+<select id="categoria" required>
+<option value="">Seleziona la categoria</option>
+<option>ALLOGGIO</option>
+<option>ALIMENTARE</option>
+<option>TRASPORTI</option>
+<option>CURA PERSONALE</option>
+<option>SVAGO_ALTRO</option>
+</select>
+
+<label for="distinta">DISTINTA / DESCRIZIONE</label>
+<input id="distinta" maxlength="80" required placeholder="Es. spesa Conad, benzina, affitto">
+
+<label for="importo">IMPORTO (€)</label>
+<input id="importo" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0.00">
+
+<button class="primary" type="submit">REGISTRA SPESA</button>
+<div id="message" class="message"></div>
+</form>
+</section>
+
+<section class="panel">
+<h3>Spese registrate</h3>
+<strong id="total">Totale: € 0,00</strong>
+<div id="entries"></div>
+</section>
+
+<section class="panel">
+<h3>Backup e trasferimento Excel</h3>
+<p class="muted">Esporta le spese in CSV per aprirle con Excel. Il bilancio originale non viene modificato automaticamente.</p>
+<button class="primary" id="csvBtn">ESPORTA SPESE PER EXCEL (CSV)</button>
+<button class="secondary" id="jsonBtn">ESPORTA BACKUP COMPLETO (JSON)</button>
+<label for="restore">RIPRISTINA BACKUP JSON</label>
+<input id="restore" type="file" accept=".json,application/json">
+<div id="backupMsg" class="message"></div>
+</section>
+<p class="muted" style="text-align:center">Conserva periodicamente una copia di backup delle tue spese.</p>
+</div>
+</main>
+
 <script>
+"use strict";
+const PIN="9909";
+const KEY="spese_coppia";
 let selected="";
-const login=document.querySelector("#login"),msg=document.querySelector("#message");
-document.querySelectorAll(".choice").forEach(b=>b.addEventListener("click",()=>{selected=b.dataset.v;document.querySelectorAll(".choice").forEach(x=>x.classList.toggle("active",x===b))}));
+let spese=[];
 
-document.querySelector("#loginBtn").onclick=()=>{if(document.querySelector("#pin").value==="1234"){login.style.display="none";document.querySelector("#loginMsg").style.display="none"}else{let lm=document.querySelector("#loginMsg");lm.textContent="PIN errato";lm.style.display="block"}};
+const $=id=>document.getElementById(id);
 
+function show(id,text,ok){
+ const el=$(id);
+ el.textContent=text;
+ el.className="message "+(ok?"ok":"err");
+}
 
-document.querySelector("#form").addEventListener("submit",e=>{e.preventDefault();if(!selected){show("Seleziona chi ha pagato.",false);return}let d={utente:selected,mese:document.querySelector("#mese").value,categoria:document.querySelector("#categoria").value,distinta:document.querySelector("#distinta").value.trim(),importo:document.querySelector("#importo").value};try{let spese=JSON.parse(localStorage.getItem("spese_coppia")||"[]");spese.push({...d,id:Date.now()});localStorage.setItem("spese_coppia",JSON.stringify(spese));show("Spesa salvata correttamente!",true);document.querySelector("#importo").value="";document.querySelector("#distinta").value="";document.querySelector("#importo").focus()}catch{show("Errore nel salvataggio sul dispositivo.",false)}});
+function load(){
+ try{
+  const data=JSON.parse(localStorage.getItem(KEY)||"[]");
+  spese=Array.isArray(data)?data:[];
+ }catch(e){spese=[]}
+}
 
-function show(t,ok){msg.textContent=t;msg.className="message "+(ok?"ok":"err");msg.style.display="block"}
-if("serviceWorker" in navigator)navigator.serviceWorker.register("/static/sw.js");
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(spese));
+}
 
-const exportBtn=document.createElement("button");
-exportBtn.type="button";
-exportBtn.textContent="ESPORTA SPESE";
-exportBtn.style.cssText="width:100%;padding:14px;margin-top:16px;border-radius:10px;font-weight:bold";
-exportBtn.onclick=()=>{
- const spese=JSON.parse(localStorage.getItem("spese_coppia")||"[]");
- if(!spese.length){alert("Nessuna spesa da esportare");return}
- const righe=[["Persona","Mese","Categoria","Distinta","Importo"],...spese.map(s=>[s.utente,s.mese,s.categoria,s.distinta,s.importo])];
- const csv="\uFEFF"+righe.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
- const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+function euro(n){
+ return Number(n||0).toLocaleString("it-IT",{style:"currency",currency:"EUR"});
+}
+
+function render(){
+ $("entries").innerHTML="";
+ let totale=0;
+ [...spese].reverse().forEach(s=>{
+  totale+=Number(s.importo);
+  const div=document.createElement("div");
+  div.className="entry";
+  const strong=document.createElement("strong");
+  strong.textContent=s.utente+" · "+euro(s.importo);
+  const small=document.createElement("div");
+  small.className="muted";
+  small.textContent=s.mese+" · "+s.categoria+" · "+s.distinta;
+  div.append(strong,small);
+  $("entries").append(div);
+ });
+ $("total").textContent="Totale: "+euro(totale);
+}
+
+$("loginBtn").onclick=()=>{
+ if($("pin").value===PIN){
+  $("login").style.display="none";
+  $("app").style.display="block";
+  load();
+  render();
+ }else{
+  show("loginMsg","PIN non corretto.",false);
+ }
+};
+
+$("pin").addEventListener("keydown",e=>{
+ if(e.key==="Enter")$("loginBtn").click();
+});
+
+document.querySelectorAll(".choice").forEach(b=>{
+ b.onclick=()=>{
+  selected=b.dataset.v;
+  document.querySelectorAll(".choice").forEach(x=>x.classList.toggle("active",x===b));
+ };
+});
+
+$("form").addEventListener("submit",e=>{
+ e.preventDefault();
+ if(!selected){show("message","Seleziona chi ha pagato.",false);return}
+ const s={
+  utente:selected,
+  mese:$("mese").value,
+  categoria:$("categoria").value,
+  distinta:$("distinta").value.trim(),
+  importo:Number($("importo").value),
+  id:Date.now()
+ };
+ if(!s.mese||!s.categoria||!s.distinta||!Number.isFinite(s.importo)||s.importo<=0){
+  show("message","Controlla tutti i campi.",false);return;
+ }
+ try{
+  spese.push(s);
+  save();
+  render();
+  $("form").reset();
+  selected="";
+  document.querySelectorAll(".choice").forEach(x=>x.classList.remove("active"));
+  show("message","Spesa salvata correttamente!",true);
+ }catch(err){
+  spese.pop();
+  show("message","Errore di salvataggio. Esporta subito un backup.",false);
+ }
+});
+
+function download(name,content,type){
+ const blob=new Blob([content],{type:type});
  const url=URL.createObjectURL(blob);
  const a=document.createElement("a");
- a.href=url;a.download="spese_coppia.csv";a.click();
- URL.revokeObjectURL(url);
-};
-document.querySelector("#form").after(exportBtn);
+ a.href=url;
+ a.download=name;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
 
-</script></body></html>
+$("csvBtn").onclick=()=>{
+ if(!spese.length){show("backupMsg","Nessuna spesa da esportare.",false);return}
+ const rows=[
+  ["Persona","Mese","Categoria","Distinta","Importo"],
+  ...spese.map(s=>[s.utente,s.mese,s.categoria,s.distinta,Number(s.importo).toFixed(2).replace(".",",")])
+ ];
+ const csv="\uFEFF"+rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ download("spese_coppia.csv",csv,"text/csv;charset=utf-8");
+ show("backupMsg","Esportazione avviata. Salva il CSV nell'app File dell'iPad.",true);
+};
+
+$("jsonBtn").onclick=()=>{
+ if(!spese.length){show("backupMsg","Nessuna spesa da salvare.",false);return}
+ download("backup_spese_coppia.json",JSON.stringify(spese,null,2),"application/json");
+ show("backupMsg","Backup creato. Conservalo in File o Drive.",true);
+};
+
+$("restore").onchange=async e=>{
+ const file=e.target.files[0];
+ if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());
+  if(!Array.isArray(data))throw new Error();
+  const ids=new Set(spese.map(s=>String(s.id)));
+  data.forEach(s=>{
+   if(s.utente&&s.mese&&s.categoria&&s.distinta&&Number.isFinite(Number(s.importo))&&!ids.has(String(s.id))){
+    spese.push(s);
+   }
+  });
+  save();render();
+  show("backupMsg","Backup ripristinato correttamente.",true);
+ }catch(err){
+  show("backupMsg","File JSON non valido.",false);
+ }
+ e.target.value="";
+};
+</script>
+</body>
+</html>
