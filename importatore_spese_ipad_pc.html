@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importatore Spese Coppia → Excel</title>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#172033;background:#f4f6fb}body{margin:0;padding:18px;max-width:850px;margin:auto}h1{font-size:1.45rem;margin:8px 0}p{line-height:1.45}.card{background:white;border:1px solid #dce2ee;border-radius:16px;padding:16px;margin:14px 0;box-shadow:0 3px 12px #1b2a4410}.step{font-weight:700;color:#2458a6}.input{display:block;width:100%;box-sizing:border-box;padding:12px;border:1px solid #b9c5d8;border-radius:10px;margin:8px 0 14px;background:#fff}button{border:0;border-radius:11px;padding:13px 16px;background:#2059b5;color:white;font-weight:700;font-size:1rem;cursor:pointer;width:100%;margin:6px 0}button:disabled{opacity:.45}button.secondary{background:#e8edf7;color:#18345f}#status{white-space:pre-wrap;background:#eef3fb;border-radius:10px;padding:12px;margin-top:12px}small{color:#596579}.ok{color:#087443}.warn{color:#a14a00}.bad{color:#b42318}ul{padding-left:20px}
+</style></head><body>
+<h1>Importatore Spese Coppia → Excel</h1>
+<p>Carica il <b>backup JSON</b> dell'app e il tuo Excel. L'importatore inserisce le nuove spese nelle righe libere secondo il Word, salta gli ID già importati e non scrive mai in celle già occupate.</p>
+<div class="card"><div class="step">1 · Backup app (JSON)</div><input class="input" id="json" type="file" accept=".json,application/json"><small>Usa “Esporta backup completo JSON” dall'app. Il JSON conserva gli ID per evitare doppioni.</small></div>
+<div class="card"><div class="step">2 · Bilancio Excel</div><input class="input" id="xlsx" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><small>Seleziona una COPIA del bilancio, non l'originale. Il file aggiornato verrà scaricato a parte.</small></div>
+<div class="card"><div class="step">3 · Importa</div><button id="run">Controlla e importa nuove spese</button><button class="secondary" id="download" disabled>Scarica Excel aggiornato</button><div id="status">In attesa dei due file…</div></div>
+<div class="card"><b>Regole di sicurezza</b><ul><li>non sovrascrive distinta o importo già presenti;</li><li>usa le fasce di righe del Word per mese e categoria;</li><li>registra gli ID importati in un foglio nascosto <code>_APP_IMPORT_LOG</code>;</li><li>se non trova righe libere, segnala la spesa e non la forza.</li></ul><small>Per conservare formule e formattazione, il file viene letto/scritto con ExcelJS. Verifica sempre il primo risultato su una copia.</small></div>
+<script>
+const $=id=>document.getElementById(id);let outputBlob=null,outputName='bilancio_2026_aggiornato.xlsx';
+const months={'GENNAIO':0,'FEBBRAIO':1,'MARZO':2,'APRILE':3,'MAGGIO':4,'GIUGNO':5,'LUGLIO':6,'AGOSTO':7,'SETTEMBRE':8,'OTTOBRE':9,'NOVEMBRE':10,'DICEMBRE':11};
+const cats={
+ 'ALLOGGIO':{sheet:'ALLOGGIO',ranges:[[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63]],cols:{GIULIA:['B','C','L','M','V','W'],LORENZO:['E','F','O','P','Y','Z']}},
+ 'ALIMENTARE':{sheet:'ALIMENTARE',ranges:[[6,26],[33,53],[60,80],[87,107],[6,26],[33,53],[60,80],[87,107],[6,26],[33,53],[60,80],[87,107]],cols:{GIULIA:['B','C','L','M','V','W'],LORENZO:['E','F','O','P','Y','Z']}},
+ 'TRASPORTI':{sheet:'TRASPORTI ',ranges:[[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63]],cols:{GIULIA:['B','C','L','M','V','W'],LORENZO:['E','F','O','P','Y','Z']}},
+ 'CURA PERSONALE':{sheet:'CURA PERSONALE ',ranges:[[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63],[6,15],[22,31],[38,47],[54,63]],cols:{GIULIA:['B','C','L','M','V','W'],LORENZO:['E','F','O','P','Y','Z']}},
+ 'SVAGO_ALTRO':{sheet:'SVAGO_ALTRO ',ranges:[[6,26],[33,53],[60,80],[87,107],[6,26],[33,53],[60,80],[87,107],[6,26],[33,53],[60,80],[87,107]],cols:{GIULIA:['B','C','L','M','V','W'],LORENZO:['E','F','O','P','Y','Z']}}
+};
+function norm(v){return String(v??'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ')}
+function colnum(s){let n=0;for(const c of s)n=n*26+c.charCodeAt(0)-64;return n}
+function readExpenseList(data){if(Array.isArray(data))return data;if(data&&Array.isArray(data.spese))return data.spese;if(data&&Array.isArray(data.expenses))return data.expenses;throw Error('Il JSON non contiene un array di spese riconoscibile.');}
+function fingerprint(s){return [norm(s.utente||s.payer||s.persona),norm(s.mese),norm(s.categoria),String(s.distinta||s.descrizione||s.description||'').trim(),String(s.importo??s.amount??'')].join('|')}
+function getMonth(s){let m=norm(s.mese||s.month);if(m in months)return months[m];let n=Number(m);if(n>=1&&n<=12)return n-1;throw Error('Mese non riconosciuto: '+m)}
+function getAmount(s){let a=s.importo??s.amount; if(typeof a==='string')a=Number(a.replace(/\s/g,'').replace(',','.').replace(/[^0-9.-]/g,''));if(!Number.isFinite(Number(a)))throw Error('Importo non valido: '+a);return Number(a)}
+function getPayer(s){let p=norm(s.utente||s.payer||s.persona);if(p.includes('GIULIA'))return 'GIULIA';if(p.includes('LORENZO'))return 'LORENZO';throw Error('Persona non riconosciuta: '+p)}
+function getCategory(s){let c=norm(s.categoria||s.category).replace(/ /g,'_');if(c==='SVAGO/ALTRO'||c==='SVAGO_ALTRO'||c==='SVAGO_ALTRO')return 'SVAGO_ALTRO';if(c==='CURA_PERSONALE')return 'CURA PERSONALE';return c}
+function getDesc(s){return String(s.distinta??s.descrizione??s.description??'').trim()}
+function status(t,cls=''){ $('status').className=cls; $('status').textContent=t; }
+$('run').onclick=async()=>{
+ $('download').disabled=true;outputBlob=null;
+ try{
+  if(!$('json').files[0]||!$('xlsx').files[0])throw Error('Seleziona prima entrambi i file.');
+  status('Lettura JSON ed Excel…');
+  const data=JSON.parse(await $('json').files[0].text());const expenses=readExpenseList(data);
+  const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(await $('xlsx').files[0].arrayBuffer());
+  let log=workbook.getWorksheet('_APP_IMPORT_LOG');if(!log){log=workbook.addWorksheet('_APP_IMPORT_LOG');log.state='veryHidden';log.getCell('A1').value='ID_IMPORTATO';log.getCell('B1').value='FINGERPRINT';}
+  const knownIds=new Set(),knownFp=new Set();for(let r=2;r<=log.rowCount;r++){let id=log.getCell(r,1).value,fp=log.getCell(r,2).value;if(id)knownIds.add(String(id));if(fp)knownFp.add(String(fp));}
+  let added=0,already=0,noRoom=0,invalid=0;const notes=[];
+  for(const s of expenses){try{
+   const id=String(s.id??s.uuid??'').trim(),fp=fingerprint(s);
+   if((id&&knownIds.has(id))||knownFp.has(fp)){already++;continue;}
+   const cat=getCategory(s),cfg=cats[cat];if(!cfg)throw Error('Categoria non riconosciuta: '+cat);
+   const month=getMonth(s),payer=getPayer(s),desc=getDesc(s),amount=getAmount(s);if(!desc)throw Error('Descrizione vuota');
+   const ws=workbook.getWorksheet(cfg.sheet);if(!ws)throw Error('Foglio Excel mancante: '+cfg.sheet);
+   const range=cfg.ranges[month],cols=cfg.cols[payer],dc=colnum(cols[Math.floor(month/4)*2]),ac=colnum(cols[Math.floor(month/4)*2+1]);
+   let target=0;for(let r=range[0];r<=range[1];r++){let dv=ws.getCell(r,dc).value,av=ws.getCell(r,ac).value;if((dv===null||dv===undefined||dv==='')&&(av===null||av===undefined||av==='')){target=r;break;}}
+   if(!target){noRoom++;notes.push('NESSUNA RIGA LIBERA · '+payer+' · '+cat+' · '+norm(s.mese)+' · '+desc);continue;}
+   ws.getCell(target,dc).value=desc;ws.getCell(target,ac).value=amount;
+   log.addRow([id||'NO_ID_'+(log.rowCount),fp]);if(id)knownIds.add(id);knownFp.add(fp);added++;
+  }catch(e){invalid++;notes.push('ERRORE · '+(s.distinta||s.descrizione||'spesa')+' · '+e.message);}}
+  const buffer=await workbook.xlsx.writeBuffer();outputBlob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const original=$('xlsx').files[0].name.replace(/\.xlsx$/i,'');outputName=original+'_aggiornato.xlsx';$('download').disabled=false;
+  let msg=`IMPORTAZIONE COMPLETATA\n\nNuove spese inserite: ${added}\nGià importate (saltate): ${already}\nSenza righe libere: ${noRoom}\nSpese non valide: ${invalid}\n\nScarica il file aggiornato.\n`;
+  if(notes.length)msg+='\nDETTAGLI (prime 40):\n'+notes.slice(0,40).join('\n');
+  status(msg,invalid||noRoom?'warn':'ok');
+ }catch(e){status('ERRORE: '+e.message,'bad');}
+};
+$('download').onclick=()=>{if(!outputBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(outputBlob);a.download=outputName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);};
+</script></body></html>
